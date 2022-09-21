@@ -11,7 +11,7 @@ services:
             - 8888:8888
 
         rstudio:
-          image: rocker/verse:4
+          image: rocker/rstudio:latest
           ports:
             - "8787:8787"
           environment:
