@@ -11,7 +11,8 @@ services:
             - 8888:8888
 
         rstudio:
-          image: rocker/rstudio:latest
+          build:
+            dockerfile: rstudio/Dockerfile
           ports:
             - "8787:8787"
           environment:
