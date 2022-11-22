@@ -117,4 +117,30 @@ autoplot(arrivals, facets = TRUE)
 japan  <- arrivals[,"Japan"] #we select a column by its name 
 autoplot(japan)  + ggtitle("Japan") + xlab("Years") + ylab("Arrivals")
 
+
 autoplot(goog)
+#
+beer -> window(ausbeer, start=1992)
+beer -> ausbeer
+ggseasonplot(beer)
+ggsubseriesplot(beer)
+
+class(ausbeer)
+frequency(ausbeer)
+
+colnames(arrivals)
+
+
+JP  <- arrivals[,"Japan"] 
+NZ  <- arrivals[,"NZ"]
+UK  <- arrivals[,"UK"]
+US  <- arrivals[,"US"]
+
+autoplot(arrivals)
+autoplot(arrivals[,"UK"])
+ggseasonplot(arrivals[,"UK"])
+ggsubseriesplot(arrivals[,"UK"])
+
+# cyclic -  we dont know when the peaks are!
+?lynx
+autoplot(lynx)
