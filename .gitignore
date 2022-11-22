@@ -38,3 +38,6 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 rstudio/
+
+# jupyter stuff
+.ipynb_checkpoints
