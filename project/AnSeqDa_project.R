@@ -1,7 +1,11 @@
 library(Mcomp)
 library(ggplot2)
 library(MASS)
-set.seed(123)
+library(xtable)
+library(forecast)
+library(ggpubr)
+
+set.seed(42)
 all_data <- subset(M3, 'quarterly')[[300]]
 all_data
 train <- all_data$x
@@ -47,46 +51,32 @@ max_rsme
 
 # simple models
 ##########################################################################
-#train_decompose <- decompose(train)
-#train_decompose$trend
-#rw_drift_mean <- mean(na.omit(train_decompose$trend))-as.numeric(head(train, n = 1))
-#rw_drift <- arima.sim(model = list(order = c(0, 1, 0)), n = 100, mean = rw_drift_mean, sd=sd(train))
+rw_model <- rwf(train, drift=TRUE, h=4)
+rw_resid <- residuals(rw_model)
 
-#rw_drift <- arima.sim(model= list(order = c(0, 1, 0)), n=100, mean=1)
-#plot(resid(rw_drift))
-#ts.plot(rw_drift)
-#ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'rw_drift.jpeg',  device='jpeg')
+ggarrange(autoplot(rw_resid) + ylab("Residuals") + ggtitle("Residuals from a random walk with drift model"), 
+          ggAcf(rw_resid) + ggtitle("Autocorrelation plot"), 
+          forecast::gghistogram(rw_resid, add.normal=TRUE) + ggtitle("Histogram of residuals")+ xlab("Residuals"), 
+          widths = c(2, 1, 1),
+          ncol = 3, nrow = 1)
+ggsave(unit= "px", width = 3500, height = 1500, path = 'workspace/project/', filename = 'simple_model_resid.jpeg',  device='jpeg')
 
-plot.ts(RW_drift_diff, col=4, main="First Order Difference")
-ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'rw_drift_first_order_diff.jpeg',  device='jpeg')
+autoplot(rw_resid) + ylab("Residuals") + ggtitle("Residuals from a random walk with drift model")
+ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'resid_from_rw_drift.jpeg',  device='jpeg')
 
-rw_drift_diff <-diff(rw_drift)
-ggAcf(rw_drift_diff) + ggtitle("Autocorrelation plot")
+ggAcf(rw_resid) + ggtitle("Autocorrelation plot")
 ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'acf_rw_drift.jpeg',  device='jpeg')
 
-
-
-
-fits <- fitted(naive(train))
-
-autoplot(train, series="Data") +
-  autolayer(fits, series="Fitted") +
-  xlab('Year') + ylab('Volume Indeces') +
-  ggtitle("SWITZERLAND Gross Domestic Product")
-
-res <- residuals(rw_drift(train))
-
-# ACF of residuals
-ggAcf(res) + ggtitle("ACF of residuals")
-ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'acf_of_residuals.jpeg',  device='jpeg')
-
-# Histogram of residuals
-gghistogram(res, add.normal=TRUE) + ggtitle("Histogram of residuals")
-ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'histogram_of_residuals.jpeg',  device='jpeg')
+forecast::gghistogram(rw_resid, add.normal=TRUE) + ggtitle("Histogram of residuals")
+ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'hist_resid.jpeg',  device='jpeg')
 
 # Ljung-Box test
-Box.test(res, lag=10, fitdf=0, type="Lj")
+Box.test(rw_resid, lag=10, fitdf=0, type="Lj")
 
+# Eval on train and test set
+acc <- xtable(accuracy(rw_model, test))
+acc
+xtable::print.xtable(acc, type = "latex", file = "metrics.tex")
 ##########################################################################
 # exponential smoothing
 
@@ -94,22 +84,36 @@ Box.test(res, lag=10, fitdf=0, type="Lj")
 ses_fc <- ses(train, h=5)
 summary(ses_fc)
 ses_resid <- resid(ses_fc)
-plot(ses_resid)
-ggAcf(ses_resid)
+
+autoplt <- autoplot(ses_resid)
+acf <- ggAcf(ses_resid)
+hist <- forecast::gghistogram(ses_resid)
+
+ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
+          ncol = 1, nrow = 2)
 
 ### Holt lin
 holt_fc <- holt(train, h=5)
 summary(holt_fc)
 holt_resid <- resid(holt_fc)
-plot(holt_resid)
-ggAcf(holt_resid)
+
+autoplt <- autoplot(holt_resid)
+acf <- ggAcf(holt_resid)
+hist <- forecast::gghistogram(holt_resid)
+
+ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
+          ncol = 1, nrow = 2)
 
 ### Holt dampend
 holt_d_fc <- holt(train, damped = TRUE, h=5)
 summary(holt_d_fc)
 holt_d_resid <- resid(holt_d_fc)
-plot(holt_d_resid)
-ggAcf(holt_d_resid)
+
+autoplt <- autoplot(holt_d_resid)
+acf <- ggAcf(holt_d_resid)
+hist <- forecast::gghistogram(holt_d_resid)
+ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
+          ncol = 1, nrow = 2)
 
 ###### ETS
 ?ets
@@ -117,16 +121,30 @@ ets_holt <- ets(y = train, model = "AAN", damped = FALSE)
 ets_holt
 plot(resid(ets_holt))
 ggAcf(resid(ets_holt))
-gghistogram(resid(ets_holt), add.normal=TRUE) + ggtitle("Histogram of residuals")
+forecast::gghistogram(resid(ets_holt), add.normal=TRUE) + ggtitle("Histogram of residuals")
 
 ets_holt_d <- ets(y = train, model = "AAN", damped = TRUE)
 ets_holt_d
 plot(resid(ets_holt_d))
 ggAcf(resid(ets_holt_d))
-gghistogram(resid(ets_holt_d), add.normal=TRUE) + ggtitle("Histogram of residuals")
+forecast::gghistogram(resid(ets_holt_d), add.normal=TRUE) + ggtitle("Histogram of residuals")
 
 ##########################################################################
 # ARIMA models
+#autoplot of diff log 
+autoplot(diff(log(train)))
+
+auto_arima <- auto.arima(train)
+summary(auto_arima)
+autoplot(forecast(auto_arima))
+
+arima_resid <- resid(auto_arima)
+
+autoplt <- autoplot(arima_resid)
+acf <- ggAcf(arima_resid)
+hist <- forecast::gghistogram(arima_resid)
+ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
+          ncol = 1, nrow = 2)
 
 ##########################################################################
 
