@@ -29,6 +29,11 @@ ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', fil
 ggsubseriesplot(train) + ylab("Volume index") + ggtitle("Seasonal subseries plot")
 ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'subseriesplot.jpeg',  device='jpeg')
 
+##### tbats
+fit <- tbats(train)
+seasonal <- !is.null(fit$seasonal)
+seasonal
+
 # autocorrelation plot
 ggAcf(train) + ggtitle("Autocorrelation plot")
 ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'autocorrelation.jpeg',  device='jpeg')
@@ -52,6 +57,10 @@ max_rsme
 # simple models
 ##########################################################################
 rw_model <- rwf(train, drift=TRUE, h=4)
+
+autoplot(rw_model)
+ggsave(unit= "px", width = 3500, height = 1500, path = 'workspace/project/', filename = 'rw_drift_autoplot.jpeg',  device='jpeg')
+
 rw_resid <- residuals(rw_model)
 
 ggarrange(autoplot(rw_resid) + ylab("Residuals") + ggtitle("Residuals from a random walk with drift model"), 
@@ -70,8 +79,10 @@ ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', fil
 forecast::gghistogram(rw_resid, add.normal=TRUE) + ggtitle("Histogram of residuals")
 ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'hist_resid.jpeg',  device='jpeg')
 
-# Ljung-Box test
-Box.test(rw_resid, lag=10, fitdf=0, type="Lj")
+# check residuals
+checkresiduals(rwf(train, drift=TRUE, h=8))
+checkresiduals(rw_model)
+# ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'check_residuals_simple_model.jpeg',  device='jpeg')
 
 # Eval on train and test set
 acc <- xtable(accuracy(rw_model, test))
@@ -81,7 +92,7 @@ xtable::print.xtable(acc, type = "latex", file = "metrics.tex")
 # exponential smoothing
 
 ### SES
-ses_fc <- ses(train, h=5)
+ses_fc <- ses(train, h=4)
 summary(ses_fc)
 ses_resid <- resid(ses_fc)
 
@@ -89,11 +100,13 @@ autoplt <- autoplot(ses_resid)
 acf <- ggAcf(ses_resid)
 hist <- forecast::gghistogram(ses_resid)
 
-ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
-          ncol = 1, nrow = 2)
+# ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),          ncol = 1, nrow = 2)
+# check residuals
+checkresiduals(ses_fc)
+
 
 ### Holt lin
-holt_fc <- holt(train, h=5)
+holt_fc <- holt(train, h=4)
 summary(holt_fc)
 holt_resid <- resid(holt_fc)
 
@@ -101,19 +114,34 @@ autoplt <- autoplot(holt_resid)
 acf <- ggAcf(holt_resid)
 hist <- forecast::gghistogram(holt_resid)
 
-ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
-          ncol = 1, nrow = 2)
+# ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),          ncol = 1, nrow = 2)
+# check residuals
+checkresiduals(holt_fc)
 
 ### Holt dampend
-holt_d_fc <- holt(train, damped = TRUE, h=5)
+holt_d_fc <- holt(train, damped = TRUE, h=4)
 summary(holt_d_fc)
 holt_d_resid <- resid(holt_d_fc)
 
 autoplt <- autoplot(holt_d_resid)
 acf <- ggAcf(holt_d_resid)
 hist <- forecast::gghistogram(holt_d_resid)
-ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
-          ncol = 1, nrow = 2)
+# ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),  ncol = 1, nrow = 2)
+# check residuals
+checkresiduals(holt_d_fc)
+
+### Holt winters
+hw_d_fc <- hw(train, damped = TRUE, h=4)
+summary(hw_d_fc)
+hw_d_resid <- resid(hw_d_fc)
+
+autoplt <- autoplot(hw_d_resid)
+acf <- ggAcf(hw_d_resid)
+hist <- forecast::gghistogram(hw_d_resid)
+# ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),  ncol = 1, nrow = 2)
+# check residuals
+checkresiduals(hw_d_fc)
+
 
 ###### ETS
 ?ets
@@ -135,6 +163,7 @@ forecast::gghistogram(resid(ets_holt_d), add.normal=TRUE) + ggtitle("Histogram o
 autoplot(diff(log(train)))
 
 auto_arima <- auto.arima(train)
+checkresiduals(auto_arima)
 summary(auto_arima)
 autoplot(forecast(auto_arima))
 
