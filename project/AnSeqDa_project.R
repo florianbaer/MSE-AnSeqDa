@@ -146,6 +146,7 @@ checkresiduals(hw_d_fc)
 ###### ETS
 ?ets
 ets_holt <- ets(y = train, model = "AAN", damped = FALSE)
+checkresiduals(ets_holt)
 ets_holt
 plot(resid(ets_holt))
 ggAcf(resid(ets_holt))
@@ -176,4 +177,15 @@ ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
           ncol = 1, nrow = 2)
 
 ##########################################################################
+# conclusion
+holt_d_fc <- holt(train, damped = TRUE, h=4)
+summary(holt_d_fc)
+autoplot(all_data) + plot(test)
 
+
+# check residuals
+checkresiduals(holt_d_fc)
+
+acc <- xtable(accuracy(rw_model, test))
+acc
+xtable::print.xtable(acc, type = "latex", file = "metrics.tex")
