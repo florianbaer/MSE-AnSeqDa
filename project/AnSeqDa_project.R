@@ -178,14 +178,15 @@ ggarrange(autoplt, ggarrange(acf, hist, ncol=2, nrow=1),
 
 ##########################################################################
 # conclusion
-holt_d_fc <- holt(train, damped = TRUE, h=4)
+holt_d_fc <- holt(train, damped = TRUE, h=8)
 summary(holt_d_fc)
-autoplot(all_data) + plot(test)
+autoplot(holt_d_fc) + autolayer(test)
 
+ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', filename = 'holt_dampened_forecast.jpeg',  device='jpeg')
 
 # check residuals
 checkresiduals(holt_d_fc)
 
-acc <- xtable(accuracy(rw_model, test))
+acc <- xtable(accuracy(holt_d_fc, test))
 acc
 xtable::print.xtable(acc, type = "latex", file = "metrics.tex")
