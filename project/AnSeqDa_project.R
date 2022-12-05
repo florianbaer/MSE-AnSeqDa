@@ -48,9 +48,9 @@ ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', fil
 length(test)
 last_train <- as.numeric(tail(train, n=1))
 last_train
-max_mae <- last_train * 0.05
+max_mae <- last_train * 0.01
 max_mae
-max_rsme <-  sqrt((8*(last_train - (last_train * 1.05))^2)/8)
+max_rsme <-  sqrt((8*(last_train - (last_train * 1.01))^2)/8)
 max_rsme
 
 
@@ -118,6 +118,7 @@ hist <- forecast::gghistogram(holt_resid)
 # check residuals
 checkresiduals(holt_fc)
 
+
 ### Holt dampend
 holt_d_fc <- holt(train, damped = TRUE, h=4)
 summary(holt_d_fc)
@@ -144,8 +145,11 @@ checkresiduals(hw_d_fc)
 
 
 ###### ETS
+summary(ets(train))
+summary(ets(train, damped = FALSE))
+
 ?ets
-ets_holt <- ets(y = train, model = "AAN", damped = FALSE)
+ets_holt <- ets(y = train)
 checkresiduals(ets_holt)
 ets_holt
 plot(resid(ets_holt))
@@ -162,8 +166,9 @@ forecast::gghistogram(resid(ets_holt_d), add.normal=TRUE) + ggtitle("Histogram o
 # ARIMA models
 #autoplot of diff log 
 autoplot(diff(log(train)))
-
+?auto.arima
 auto_arima <- auto.arima(train)
+summary(auto_arima)
 checkresiduals(auto_arima)
 summary(auto_arima)
 autoplot(forecast(auto_arima))
@@ -186,7 +191,24 @@ ggsave(unit= "px", width = 2500, height = 1500, path = 'workspace/project/', fil
 
 # check residuals
 checkresiduals(holt_d_fc)
-
 acc <- xtable(accuracy(holt_d_fc, test))
 acc
-xtable::print.xtable(acc, type = "latex", file = "metrics.tex")
+xtable::print.xets_holttable(acc, type = "latex", file = "metrics.tex")
+ets_holt
+
+?ets_holt
+
+
+t(accuracy(rw_model, test))[c('RMSE', 'MAE'), ]
+
+tabl <- cbind(t(accuracy(rw_model, test))[c('RMSE', 'MAE'), ], 
+              t(accuracy(ses_fc, test))[c('RMSE', 'MAE'), ], 
+              t(accuracy(holt_fc, test))[c('RMSE', 'MAE'), ], 
+              t(accuracy(holt_d_fc, test))[c('RMSE', 'MAE'), ], 
+              t(accuracy(forecast(ets_holt, h=8), test))[c('RMSE', 'MAE'), ], 
+              t(accuracy(forecast(auto_arima, h=8), test))[c('RMSE', 'MAE'), ]
+)
+tabl
+xtable(tabl)
+auto_arima
+ets_holt
